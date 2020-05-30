@@ -73,7 +73,6 @@ public struct Scheme: Equatable {
         public static let parallelizeBuildDefault = true
         public static let buildImplicitDependenciesDefault = true
 
-        public var executableName: String?
         public var targets: [BuildTarget]
         public var parallelizeBuild: Bool
         public var buildImplicitDependencies: Bool
@@ -82,14 +81,12 @@ public struct Scheme: Equatable {
 
         public init(
             targets: [BuildTarget],
-            executableName: String? = nil,
             parallelizeBuild: Bool = parallelizeBuildDefault,
             buildImplicitDependencies: Bool = buildImplicitDependenciesDefault,
             preActions: [ExecutionAction] = [],
             postActions: [ExecutionAction] = []
         ) {
             self.targets = targets
-            self.executableName = executableName
             self.parallelizeBuild = parallelizeBuild
             self.buildImplicitDependencies = buildImplicitDependencies
             self.preActions = preActions
@@ -111,12 +108,15 @@ public struct Scheme: Equatable {
         public var stopOnEveryMainThreadCheckerIssue: Bool
         public var language: String?
         public var region: String?
+        public var askForAppToLaunch: Bool?
         public var launchAutomaticallySubstyle: String?
         public var debugEnabled: Bool
         public var simulateLocation: SimulateLocation?
+        public var executableName: String?
 
         public init(
             config: String,
+            executableName: String? = nil,
             commandLineArguments: [String: Bool] = [:],
             preActions: [ExecutionAction] = [],
             postActions: [ExecutionAction] = [],
@@ -125,6 +125,7 @@ public struct Scheme: Equatable {
             stopOnEveryMainThreadCheckerIssue: Bool = stopOnEveryMainThreadCheckerIssueDefault,
             language: String? = nil,
             region: String? = nil,
+            askForAppToLaunch: Bool? = nil,
             launchAutomaticallySubstyle: String? = nil,
             debugEnabled: Bool = debugEnabledDefault,
             simulateLocation: SimulateLocation? = nil
@@ -138,6 +139,7 @@ public struct Scheme: Equatable {
             self.stopOnEveryMainThreadCheckerIssue = stopOnEveryMainThreadCheckerIssue
             self.language = language
             self.region = region
+            self.askForAppToLaunch = askForAppToLaunch
             self.launchAutomaticallySubstyle = launchAutomaticallySubstyle
             self.debugEnabled = debugEnabled
             self.simulateLocation = simulateLocation
@@ -356,6 +358,7 @@ extension Scheme.Run: JSONObjectConvertible {
         region = jsonDictionary.json(atKeyPath: "region")
         debugEnabled = jsonDictionary.json(atKeyPath: "debugEnabled") ?? Scheme.Run.debugEnabledDefault
         simulateLocation = jsonDictionary.json(atKeyPath: "simulateLocation")
+        executableName = jsonDictionary.json(atKeyPath: "executable")
 
         // launchAutomaticallySubstyle is defined as a String in XcodeProj but its value is often
         // an integer. Parse both to be nice.
@@ -363,6 +366,10 @@ extension Scheme.Run: JSONObjectConvertible {
             launchAutomaticallySubstyle = String(int)
         } else if let string: String = jsonDictionary.json(atKeyPath: "launchAutomaticallySubstyle") {
             launchAutomaticallySubstyle = string
+        }
+        
+        if let askLaunch: Bool = jsonDictionary.json(atKeyPath: "askForAppToLaunch") {
+            askForAppToLaunch = askLaunch
         }
     }
 }
@@ -377,6 +384,7 @@ extension Scheme.Run: JSONEncodable {
             "config": config,
             "language": language,
             "region": region,
+            "askForAppToLaunch": askForAppToLaunch,
             "launchAutomaticallySubstyle": launchAutomaticallySubstyle,
         ]
 
@@ -609,7 +617,6 @@ extension Scheme.Build: JSONObjectConvertible {
             targets.append(Scheme.BuildTarget(target: target, buildTypes: buildTypes))
         }
         self.targets = targets.sorted { $0.target.name < $1.target.name }
-        self.executableName = jsonDictionary.json(atKeyPath: "executable")
         preActions = try jsonDictionary.json(atKeyPath: "preActions")?.map(Scheme.ExecutionAction.init) ?? []
         postActions = try jsonDictionary.json(atKeyPath: "postActions")?.map(Scheme.ExecutionAction.init) ?? []
         parallelizeBuild = jsonDictionary.json(atKeyPath: "parallelizeBuild") ?? Scheme.Build.parallelizeBuildDefault
